@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaskFlow — Student Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f13;
+    --surface: #1a1a22;
+    --surface2: #22222e;
+    --border: rgba(255,255,255,0.08);
+    --text: #f0eee8;
+    --muted: #888794;
+    --accent: #c8b8ff;
+    --accent2: #7c6aff;
+    --green: #6ee7b7;
+    --amber: #fbbf24;
+    --red: #f87171;
+    --font-serif: 'DM Serif Display', serif;
+    --font-sans: 'DM Sans', sans-serif;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  /* ── SCREENS ── */
+  .screen { display: none; width: 100%; max-width: 420px; }
+  .screen.active { display: block; }
+  #app-screen { max-width: 680px; }
+
+  /* ── AUTH CARD ── */
+  .auth-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2.5rem 2rem;
+    animation: fadeUp 0.35s ease;
+  }
+
+  .auth-logo {
+    font-family: var(--font-serif);
+    font-size: 2rem;
+    color: var(--accent);
+    margin-bottom: 0.25rem;
+  }
+  .auth-sub { color: var(--muted); font-size: 14px; margin-bottom: 2rem; }
+
+  .field { margin-bottom: 1rem; }
+  .field label { display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 6px; letter-spacing: 0.06em; text-transform: uppercase; }
+
+  input[type=text], input[type=email], input[type=password], input[type=date], select, textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent2); }
+  select option { background: var(--surface2); }
+
+  .btn {
+    width: 100%;
+    padding: 11px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: var(--accent2); color: #fff; }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); margin-top: 0.5rem; }
+  .btn-ghost:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+  .btn-sm { width: auto; padding: 5px 12px; font-size: 12px; border-radius: 6px; }
+  .btn-danger { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.25); }
+
+  .link-btn { background: none; border: none; color: var(--accent); font-size: 13px; cursor: pointer; padding: 0; font-family: var(--font-sans); }
+  .link-btn:hover { text-decoration: underline; }
+
+  .row-between { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; }
+
+  .msg { font-size: 13px; padding: 8px 12px; border-radius: var(--radius-sm); margin-bottom: 1rem; }
+  .msg-error { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25); color: var(--red); }
+  .msg-success { background: rgba(110,231,183,0.1); border: 1px solid rgba(110,231,183,0.25); color: var(--green); }
+
+  /* ── APP SHELL ── */
+  .app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .app-logo { font-family: var(--font-serif); font-size: 1.6rem; color: var(--accent); }
+  .user-pill {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 5px 14px 5px 8px;
+    font-size: 13px; color: var(--muted);
+  }
+  .avatar {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; color: #fff;
+  }
+
+  /* ── ADD TASK FORM ── */
+  .add-form {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .form-grid .full { grid-column: 1 / -1; }
+  .add-form .btn { margin-top: 0.75rem; }
+
+  /* ── FILTERS ── */
+  .filter-bar {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 1rem; flex-wrap: wrap;
+  }
+  .filter-bar input[type=text] { flex: 1; min-width: 150px; }
+  .chip {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 4px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all 0.15s;
+  }
+  .chip.active { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+
+  /* ── TASK LIST ── */
+  .task-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .task-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    transition: border-color 0.2s, opacity 0.2s;
+    animation: fadeUp 0.25s ease;
+  }
+  .task-item:hover { border-color: rgba(255,255,255,0.15); }
+  .task-item.done { opacity: 0.5; }
+
+  .check-btn {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 2px solid var(--border);
+    background: transparent; cursor: pointer;
+    flex-shrink: 0; margin-top: 2px;
+    transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .check-btn.checked { background: var(--green); border-color: var(--green); }
+  .check-btn.checked::after { content: '✓'; font-size: 11px; color: #0f0f13; font-weight: 700; }
+
+  .task-body { flex: 1; min-width: 0; }
+  .task-name { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+  .task-item.done .task-name { text-decoration: line-through; color: var(--muted); }
+  .task-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  .badge {
+    font-size: 11px; padding: 2px 8px; border-radius: 99px; font-weight: 500;
+  }
+  .badge-high { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
+  .badge-medium { background: rgba(251,191,36,0.15); color: var(--amber); border: 1px solid rgba(251,191,36,0.2); }
+  .badge-low { background: rgba(110,231,183,0.12); color: var(--green); border: 1px solid rgba(110,231,183,0.2); }
+
+  .due-tag { font-size: 11px; color: var(--muted); }
+  .due-tag.overdue { color: var(--red); }
+
+  .task-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .icon-btn {
+    background: none; border: none; color: var(--muted); cursor: pointer;
+    font-size: 13px; padding: 3px 6px; border-radius: 5px;
+    transition: background 0.15s, color 0.15s;
+  }
+  .icon-btn:hover { background: var(--surface2); color: var(--text); }
+
+  /* ── SUMMARY BAR ── */
+  .summary-bar {
+    display: flex; gap: 12px; margin-bottom: 1.5rem; flex-wrap: wrap;
+  }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 16px; flex: 1; min-width: 80px; }
+  .stat-val { font-size: 22px; font-weight: 500; }
+  .stat-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* ── INLINE EDIT ── */
+  .edit-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100; padding: 1rem;
+  }
+  .edit-modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    width: 100%; max-width: 420px;
+    animation: fadeUp 0.2s ease;
+  }
+  .modal-title { font-family: var(--font-serif); font-size: 1.2rem; margin-bottom: 1.25rem; }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 16px; font-size: 13px;
+    transform: translateY(80px); opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 200;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* ── EMPTY STATE ── */
+  .empty { text-align: center; padding: 3rem 1rem; color: var(--muted); }
+  .empty-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN SCREEN ══ -->
+<div class="screen active" id="login-screen">
+  <div class="auth-card">
+    <div class="auth-logo">TaskFlow</div>
+    <div class="auth-sub">Your student planner — sign in to continue</div>
+    <div id="login-msg"></div>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="student@email.com">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="login-pass" placeholder="••••••••">
+    </div>
+    <button class="btn btn-primary" onclick="doLogin()">Sign in</button>
+    <div class="row-between" style="margin-top:1.25rem;">
+      <button class="link-btn" onclick="showScreen('register-screen')">Create account</button>
+      <button class="link-btn" onclick="showScreen('reset-screen')">Forgot password?</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ REGISTER SCREEN ══ -->
+<div class="screen" id="register-screen">
+  <div class="auth-card">
+    <div class="auth-logo">TaskFlow</div>
+    <div class="auth-sub">Create your free account</div>
+    <div id="reg-msg"></div>
+    <div class="field"><label>Full name</label><input type="text" id="reg-name" placeholder="Alex Johnson"></div>
+    <div class="field"><label>Email</label><input type="email" id="reg-email" placeholder="student@email.com"></div>
+    <div class="field"><label>Password</label><input type="password" id="reg-pass" placeholder="min 6 characters"></div>
+    <div class="field"><label>Confirm password</label><input type="password" id="reg-pass2" placeholder="repeat password"></div>
+    <button class="btn btn-primary" onclick="doRegister()">Create account</button>
+    <button class="btn btn-ghost" onclick="showScreen('login-screen')">← Back to sign in</button>
+  </div>
+</div>
+
+<!-- ══ PASSWORD RESET SCREEN ══ -->
+<div class="screen" id="reset-screen">
+  <div class="auth-card">
+    <div class="auth-logo">TaskFlow</div>
+    <div class="auth-sub">Reset your password</div>
+    <div id="reset-msg"></div>
+    <div id="reset-step1">
+      <div class="field"><label>Email</label><input type="email" id="reset-email" placeholder="your registered email"></div>
+      <button class="btn btn-primary" onclick="doResetStep1()">Send reset code</button>
+    </div>
+    <div id="reset-step2" style="display:none;">
+      <div class="field"><label>Reset code (check console / alert)</label><input type="text" id="reset-code" placeholder="6-digit code"></div>
+      <div class="field"><label>New password</label><input type="password" id="reset-newpass" placeholder="min 6 characters"></div>
+      <button class="btn btn-primary" onclick="doResetStep2()">Set new password</button>
+    </div>
+    <button class="btn btn-ghost" onclick="showScreen('login-screen')">← Back to sign in</button>
+  </div>
+</div>
+
+<!-- ══ APP SCREEN ══ -->
+<div class="screen" id="app-screen">
+  <div class="app-header">
+    <div class="app-logo">Student Task Manager</div>
+    <div class="user-pill">
+      <div class="avatar" id="user-avatar">A</div>
+      <span id="user-name-display">Student</span>
+      <button class="icon-btn" onclick="doLogout()" title="Logout" style="margin-left:4px; font-size:15px;">⎋</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="summary-bar">
+    <div class="stat"><div class="stat-val" id="stat-total">0</div><div class="stat-lbl">Total</div></div>
+    <div class="stat"><div class="stat-val" id="stat-done">0</div><div class="stat-lbl">Completed</div></div>
+    <div class="stat"><div class="stat-val" id="stat-pending">0</div><div class="stat-lbl">Pending</div></div>
+    <div class="stat"><div class="stat-val" id="stat-overdue" style="color:var(--red);">0</div><div class="stat-lbl">Overdue</div></div>
+  </div>
+
+  <!-- Add Task -->
+  <div class="add-form">
+    <div class="form-grid">
+      <div class="full field">
+        <label>Task name</label>
+        <input type="text" id="task-input" placeholder="e.g. Submit physics assignment" onkeydown="if(event.key==='Enter') addTask()">
+      </div>
+      <div class="field">
+        <label>Due date</label>
+        <input type="date" id="task-due">
+      </div>
+      <div class="field">
+        <label>Importance</label>
+        <select id="task-priority">
+          <option value="low">🟢 Low</option>
+          <option value="medium" selected>🟡 Medium</option>
+          <option value="high">🔴 High</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="addTask()">+ Add task</button>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <input type="text" id="search-input" placeholder="Search tasks…" oninput="render()">
+    <span class="chip active" data-filter="all" onclick="setFilter(this)">All</span>
+    <span class="chip" data-filter="pending" onclick="setFilter(this)">Pending</span>
+    <span class="chip" data-filter="completed" onclick="setFilter(this)">Completed</span>
+    <span class="chip" data-filter="high" onclick="setFilter(this)">🔴 High</span>
+  </div>
+
+  <!-- Task list -->
+  <div class="task-list" id="task-list"></div>
+
+  <!-- Clear all -->
+  <div style="margin-top:1.25rem; text-align:right;">
+    <button class="btn btn-sm btn-danger" onclick="clearAll()">Clear all tasks</button>
+  </div>
+</div>
+
+<!-- ══ EDIT MODAL ══ -->
+<div class="edit-overlay" id="edit-modal" style="display:none;">
+  <div class="edit-modal">
+    <div class="modal-title">Edit task</div>
+    <div class="field"><label>Task name</label><input type="text" id="edit-name"></div>
+    <div class="field"><label>Due date</label><input type="date" id="edit-due"></div>
+    <div class="field"><label>Importance</label>
+      <select id="edit-priority">
+        <option value="low">🟢 Low</option>
+        <option value="medium">🟡 Medium</option>
+        <option value="high">🔴 High</option>
+      </select>
+    </div>
+    <div style="display:flex; gap:8px; margin-top:1rem;">
+      <button class="btn btn-primary" style="flex:1;" onclick="saveEdit()">Save</button>
+      <button class="btn btn-ghost" style="width:auto; padding:10px 18px;" onclick="closeEdit()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TOAST ══ -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Storage helpers ──────────────────────────────────────────
+function getUsers() { try { return JSON.parse(localStorage.getItem('tf_users') || '{}'); } catch { return {}; } }
+function saveUsers(u) { localStorage.setItem('tf_users', JSON.stringify(u)); }
+function getSession() { return localStorage.getItem('tf_session'); }
+function setSession(email) { localStorage.setItem('tf_session', email); }
+function clearSession() { localStorage.removeItem('tf_session'); }
+function getTasks(email) { try { return JSON.parse(localStorage.getItem('tf_tasks_' + email) || '[]'); } catch { return []; } }
+function saveTasks(email, tasks) { localStorage.setItem('tf_tasks_' + email, JSON.stringify(tasks)); }
+
+// ── State ────────────────────────────────────────────────────
+let currentUser = null;
+let tasks = [];
+let activeFilter = 'all';
+let editingId = null;
+let resetPending = { email: null, code: null };
+
+// ── Screen navigation ────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ── Toast ────────────────────────────────────────────────────
+function toast(msg, dur = 2200) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), dur);
+}
+
+// ── Auth: Register ───────────────────────────────────────────
+function doRegister() {
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim().toLowerCase();
+  const pass = document.getElementById('reg-pass').value;
+  const pass2 = document.getElementById('reg-pass2').value;
+  const msgEl = document.getElementById('reg-msg');
+
+  if (!name || !email || !pass) return showMsg(msgEl, 'All fields are required.', 'error');
+  if (pass.length < 6) return showMsg(msgEl, 'Password must be at least 6 characters.', 'error');
+  if (pass !== pass2) return showMsg(msgEl, 'Passwords do not match.', 'error');
+
+  const users = getUsers();
+  if (users[email]) return showMsg(msgEl, 'An account with this email already exists.', 'error');
+
+  users[email] = { name, email, password: btoa(pass) };
+  saveUsers(users);
+  showMsg(msgEl, 'Account created! Signing you in…', 'success');
+  setTimeout(() => { loginAs(email); }, 900);
+}
+
+// ── Auth: Login ──────────────────────────────────────────────
+function doLogin() {
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const pass = document.getElementById('login-pass').value;
+  const msgEl = document.getElementById('login-msg');
+
+  const users = getUsers();
+  if (!users[email]) return showMsg(msgEl, 'No account found with that email.', 'error');
+  if (users[email].password !== btoa(pass)) return showMsg(msgEl, 'Incorrect password.', 'error');
+
+  loginAs(email);
+}
+
+function loginAs(email) {
+  const users = getUsers();
+  currentUser = users[email];
+  setSession(email);
+  tasks = getTasks(email);
+  const avatar = document.getElementById('user-avatar');
+  avatar.textContent = currentUser.name.charAt(0).toUpperCase();
+  document.getElementById('user-name-display').textContent = currentUser.name.split(' ')[0];
+  showScreen('app-screen');
+  render();
+}
+
+// ── Auth: Logout ─────────────────────────────────────────────
+function doLogout() {
+  currentUser = null;
+  tasks = [];
+  clearSession();
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-msg').innerHTML = '';
+  showScreen('login-screen');
+  toast('Signed out successfully');
+}
+
+// ── Auth: Password Reset ─────────────────────────────────────
+function doResetStep1() {
+  const email = document.getElementById('reset-email').value.trim().toLowerCase();
+  const msgEl = document.getElementById('reset-msg');
+  const users = getUsers();
+
+  if (!users[email]) return showMsg(msgEl, 'No account found with that email.', 'error');
+
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  resetPending = { email, code };
+
+  // In a real app this would email the code. We alert it for demo.
+  alert('Your password reset code is: ' + code + '\n(In production this would be sent to your email)');
+
+  showMsg(msgEl, 'Code sent! Enter it below.', 'success');
+  document.getElementById('reset-step1').style.display = 'none';
+  document.getElementById('reset-step2').style.display = 'block';
+}
+
+function doResetStep2() {
+  const code = document.getElementById('reset-code').value.trim();
+  const newPass = document.getElementById('reset-newpass').value;
+  const msgEl = document.getElementById('reset-msg');
+
+  if (code !== resetPending.code) return showMsg(msgEl, 'Incorrect code. Try again.', 'error');
+  if (newPass.length < 6) return showMsg(msgEl, 'Password must be at least 6 characters.', 'error');
+
+  const users = getUsers();
+  users[resetPending.email].password = btoa(newPass);
+  saveUsers(users);
+
+  showMsg(msgEl, 'Password updated! You can now sign in.', 'success');
+  setTimeout(() => {
+    document.getElementById('reset-step1').style.display = 'block';
+    document.getElementById('reset-step2').style.display = 'none';
+    resetPending = { email: null, code: null };
+    showScreen('login-screen');
+  }, 1500);
+}
+
+// ── Tasks: Add ───────────────────────────────────────────────
+function addTask() {
+  const name = document.getElementById('task-input').value.trim();
+  if (!name) return toast('Please enter a task name.');
+
+  const due = document.getElementById('task-due').value;
+  const priority = document.getElementById('task-priority').value;
+
+  tasks.push({
+    id: Date.now(),
+    text: name,
+    due,
+    priority,
+    done: false,
+    created: new Date().toISOString()
+  });
+
+  saveTasks(currentUser.email, tasks);
+  document.getElementById('task-input').value = '';
+  document.getElementById('task-due').value = '';
+  document.getElementById('task-priority').value = 'medium';
+  render();
+  toast('Task added ✓');
+}
+
+// ── Tasks: Toggle done ───────────────────────────────────────
+function toggleTask(id) {
+  const t = tasks.find(t => t.id === id);
+  if (t) { t.done = !t.done; saveTasks(currentUser.email, tasks); render(); }
+}
+
+// ── Tasks: Delete ────────────────────────────────────────────
+function deleteTask(id) {
+  tasks = tasks.filter(t => t.id !== id);
+  saveTasks(currentUser.email, tasks);
+  render();
+  toast('Task removed');
+}
+
+// ── Tasks: Edit ──────────────────────────────────────────────
+function openEdit(id) {
+  const t = tasks.find(t => t.id === id);
+  if (!t) return;
+  editingId = id;
+  document.getElementById('edit-name').value = t.text;
+  document.getElementById('edit-due').value = t.due || '';
+  document.getElementById('edit-priority').value = t.priority || 'medium';
+  document.getElementById('edit-modal').style.display = 'flex';
+}
+
+function closeEdit() {
+  editingId = null;
+  document.getElementById('edit-modal').style.display = 'none';
+}
+
+function saveEdit() {
+  const t = tasks.find(t => t.id === editingId);
+  if (!t) return closeEdit();
+  const name = document.getElementById('edit-name').value.trim();
+  if (!name) return toast('Task name cannot be empty.');
+  t.text = name;
+  t.due = document.getElementById('edit-due').value;
+  t.priority = document.getElementById('edit-priority').value;
+  saveTasks(currentUser.email, tasks);
+  closeEdit();
+  render();
+  toast('Task updated ✓');
+}
+
+// ── Clear all ────────────────────────────────────────────────
+function clearAll() {
+  if (!confirm('Delete all your tasks?')) return;
+  tasks = [];
+  saveTasks(currentUser.email, tasks);
+  render();
+  toast('All tasks cleared');
+}
+
+// ── Filter ───────────────────────────────────────────────────
+function setFilter(el) {
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  activeFilter = el.dataset.filter;
+  render();
+}
+
+// ── Render ───────────────────────────────────────────────────
+function render() {
+  const search = (document.getElementById('search-input')?.value || '').toLowerCase();
+  const today = new Date().toISOString().split('T')[0];
+
+  let visible = tasks.filter(t => {
+    if (search && !t.text.toLowerCase().includes(search)) return false;
+    if (activeFilter === 'pending') return !t.done;
+    if (activeFilter === 'completed') return t.done;
+    if (activeFilter === 'high') return t.priority === 'high';
+    return true;
+  });
+
+  // Stats (always from full tasks)
+  const overdue = tasks.filter(t => !t.done && t.due && t.due < today).length;
+  document.getElementById('stat-total').textContent = tasks.length;
+  document.getElementById('stat-done').textContent = tasks.filter(t => t.done).length;
+  document.getElementById('stat-pending').textContent = tasks.filter(t => !t.done).length;
+  document.getElementById('stat-overdue').textContent = overdue;
+
+  const list = document.getElementById('task-list');
+
+  if (visible.length === 0) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><div>No tasks here yet</div></div>`;
+    return;
+  }
+
+  list.innerHTML = '';
+  visible.forEach(t => {
+    const isOverdue = !t.done && t.due && t.due < today;
+
+    const item = document.createElement('div');
+    item.className = 'task-item' + (t.done ? ' done' : '');
+
+    const checkBtn = document.createElement('button');
+    checkBtn.className = 'check-btn' + (t.done ? ' checked' : '');
+    checkBtn.onclick = () => toggleTask(t.id);
+
+    const body = document.createElement('div');
+    body.className = 'task-body';
+
+    const name = document.createElement('div');
+    name.className = 'task-name';
+    name.textContent = t.text;
+
+    const meta = document.createElement('div');
+    meta.className = 'task-meta';
+
+    if (t.priority) {
+      const badge = document.createElement('span');
+      badge.className = 'badge badge-' + t.priority;
+      badge.textContent = t.priority.charAt(0).toUpperCase() + t.priority.slice(1);
+      meta.appendChild(badge);
+    }
+
+    if (t.due) {
+      const due = document.createElement('span');
+      due.className = 'due-tag' + (isOverdue ? ' overdue' : '');
+      due.textContent = (isOverdue ? '⚠ Overdue · ' : '📅 Due: ') + formatDate(t.due);
+      meta.appendChild(due);
+    }
+
+    body.appendChild(name);
+    body.appendChild(meta);
+
+    const actions = document.createElement('div');
+    actions.className = 'task-actions';
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'icon-btn';
+    editBtn.textContent = '✏';
+    editBtn.title = 'Edit';
+    editBtn.onclick = () => openEdit(t.id);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'icon-btn';
+    delBtn.textContent = '🗑';
+    delBtn.title = 'Delete';
+    delBtn.style.color = 'var(--red)';
+    delBtn.onclick = () => deleteTask(t.id);
+
+    actions.appendChild(editBtn);
+    actions.appendChild(delBtn);
+
+    item.appendChild(checkBtn);
+    item.appendChild(body);
+    item.appendChild(actions);
+    list.appendChild(item);
+  });
+}
+
+// ── Helpers ──────────────────────────────────────────────────
+function showMsg(el, text, type) {
+  el.className = 'msg msg-' + type;
+  el.textContent = text;
+}
+
+function formatDate(d) {
+  if (!d) return '';
+  const [y, m, day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+// ── Auto-login on reload ─────────────────────────────────────
+(function init() {
+  const session = getSession();
+  if (session) {
+    const users = getUsers();
+    if (users[session]) { loginAs(session); return; }
+    clearSession();
+  }
+})();
+</script>
+</body>
+</html>
